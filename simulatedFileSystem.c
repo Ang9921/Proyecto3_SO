@@ -40,8 +40,8 @@ struct action {
   char *cmd;					// pointer to string
   int (*action)(char *name, char *size);	// pointer to function
 } table[] = {
-    { "root" , do_root  },
-    { "print", do_print },
+    { "start" , do_root  },
+    { "ls", do_print },
     { "cd", do_cd },
     { "mkdir", do_mkdir },
     { "rmdir", do_rmdir },
@@ -1309,13 +1309,18 @@ void print_directory ( char *name) {
 	dir_type *folder = malloc( BLOCK_SIZE);
 	int block_index = find_block(name, true);
 	memcpy( folder, disk + block_index*BLOCK_SIZE, BLOCK_SIZE);
+
+	time_t t = time(NULL);
+	struct tm *tm = localtime(&t);
+	char s[64];
+	assert(strftime(s, sizeof(s), "%c", tm));
 	
 	printf("	-----------------------------\n");
-	printf("	New Folder Attributes:\n\n\tname = %s\n\ttop_level = %s\n\tsubitems = ", folder->name, folder->top_level);
+	printf("	New Folder Attributes:\n\n\tname = %s\n\tDate and hour= %s\n\t", folder->name, s);
 	for (int i = 0; i < folder->subitem_count; i++) {
 		printf( "%s ", folder->subitem[i]);
 	}
-	printf("\n\tsubitem_count = %d\n", folder->subitem_count);
+	//printf("\n\tsubitem_count = %d\n", folder->subitem_count);
 	printf("	-----------------------------\n");
 	
 	free(folder);
@@ -1325,9 +1330,14 @@ void print_file ( char *name) {
 	file_type *file = malloc( BLOCK_SIZE);
 	int block_index = find_block(name, false);
 	memcpy( file, disk + block_index*BLOCK_SIZE, BLOCK_SIZE);
+
+	time_t t = time(NULL);
+    	struct tm *tm = localtime(&t);
+    	char s[64];
+    	assert(strftime(s, sizeof(s), "%c", tm));
 	
 	printf("	-----------------------------\n");
-	printf("	New File Attributes:\n\n\tname = %s\n\ttop_level = %s\n\tfile size = %d\n\tblock count = %d\n", file->name, file->top_level, file->size, file->data_block_count);
+	printf("	New File Attributes:\n\n\tname = %s\n\tDate and hour = %s\n\tFile Size = %d\n\tLast Modified= %d\n", file->name, s, file->size, file->data_block_count);
 	printf("	-----------------------------\n");
 	
 	free(file);
