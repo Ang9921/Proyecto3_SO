@@ -3,7 +3,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdbool.h>
-
+#include <time.h>
+#include <assert.h>
 /* command	action
  * -------	------
  *  root	initialize root directory
@@ -23,6 +24,7 @@ int debug = 1;	// extra output; 1 = on, 0 = off
 
 int do_root (char *name, char *size);
 int do_print(char *name, char *size);
+int do_print_vs(char *name, char *size);
 int do_cd(char *name, char *size);
 int do_mkdir(char *name, char *size);
 int do_rmdir(char *name, char *size);
@@ -42,6 +44,7 @@ struct action {
 } table[] = {
     { "start" , do_root  },
     { "ls", do_print },
+	{ "vs", do_print_vs },
     { "cd", do_cd },
     { "mkdir", do_mkdir },
     { "rmdir", do_rmdir },
@@ -56,6 +59,7 @@ struct action {
 
 /*--------------------------------------------------------------------------------*/
 void printing(char *name);
+void printing_ls(char *name);
 void print_descriptor ( );
 void parse(char *buf, int *argc, char *argv[]);
 int allocate_block (char *name, bool directory ) ;
@@ -67,7 +71,6 @@ int edit_descriptor ( int free_index, bool free, int name_index, char * name );
 int edit_descriptor_name (int index, char* new_name);
 int add_directory( char * name );
 int remove_directory( char * name );
-int rename_directory( char *name, char *new_name );
 int edit_directory ( char * name,  char*subitem_name, char *new_name, bool name_change, bool directory );
 int add_file( char * name, int size );
 int edit_file ( char * name, int size, char *new_name );
@@ -93,6 +96,9 @@ void print_file ( char *name);
 #define MAX_STRING_LENGTH 20
 #define MAX_FILE_DATA_BLOCKS (BLOCK_SIZE-64*59) //Hard-coded as of now
 #define MAX_SUBDIRECTORIES  (BLOCK_SIZE - 136)/MAX_STRING_LENGTH
+#define ANSI_COLOR_BLUE    "\x1b[34m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
+#define ANSI_COLOR_YELLOW  "\x1b[33m"
 
 typedef struct {
 	char directory[MAX_STRING_LENGTH];
@@ -158,7 +164,7 @@ int main(int argc, char *argv[])
       fnm = (n > 1) ? a[1] : dummy;
       fsz = (n > 2) ? a[2] : dummy;
 
-      if (debug) printf(":%s:%s:%s:\n", cmd, fnm, fsz);
+      if (debug) //printf(":%s:%s:%s:\n", cmd, fnm, fsz);
 
       if (n == 0) continue;	// blank line
 
@@ -176,8 +182,8 @@ int main(int argc, char *argv[])
                     break;
                 }
 	    }
-      if (!found) { printf("command not found: %s\n", cmd);}
-	  printf("%s/%s$ ", current.parent,current.directory);
+      if (!found) { printf("command not found: %s\n", cmd );}
+	  printf(ANSI_COLOR_BLUE"%s/%s$ "ANSI_COLOR_RESET, current.parent,current.directory);
     }
 
   return 0;
@@ -254,9 +260,26 @@ int do_print(char *name, char *size)
 		return 0;
 	}
 	//Start with the root directory, which is directory type (true)
-	printing("root");
+	printing_ls(current.directory);
 	
-	if (debug) if ( debug ) printf("\n\t[%s] Finished printing\n", __func__);
+	//if (debug) if ( debug ) printf("\n\t[%s] Finished printing\n", __func__);
+	return 0;
+}
+
+/*--------------------------------------------------------------------------------*/
+
+int do_print_vs(char *name, char *size)
+{
+	(void)*name;
+	(void)*size;
+	if ( disk_allocated == false ) {
+		printf("Error: Disk not allocated\n");
+		return 0;
+	}
+	//Start with the root directory, which is directory type (true)
+	printing(current.directory);
+	
+	//if (debug) if ( debug ) printf("\n\t[%s] Finished printing\n", __func__);
 	return 0;
 }
 
@@ -327,6 +350,10 @@ int do_mkdir(char *name, char *size)
 			if (!debug ) printf( "%s: cannot create directory '%s': Folder exists\n", "mkdir", name );
 			return 0;
 		}
+	else{
+		printf("mkdir: no se puede crear el directorio «%s»: El archivo ya existe", name);
+
+	}
 
 	//Call add directory
 	if ( debug ) printf("\t[%s] Creating Directory: [%s]\n", __func__, name );
@@ -585,6 +612,25 @@ void printing(char *name) {
 	}
 }
 
+//Prints the information of the current directory 
+void printing_ls(char *name) {
+	//Allocate memory to a dir_type so that we can copy the folder from memory into this variable.
+	dir_type *folder = malloc (BLOCK_SIZE);
+	int block_index = find_block(name, true);
+
+	memcpy( folder, disk + block_index*BLOCK_SIZE, BLOCK_SIZE);
+		
+	printf("%s:\n", folder->name);
+	for( int i = 0; i < folder->subitem_count; i++ ) {
+		if(folder->subitem_type[i]){
+			printf(ANSI_COLOR_YELLOW"\t%s\n"ANSI_COLOR_RESET, folder->subitem[i]);
+		}else{
+			printf("\t%s\n", folder->subitem[i]);
+		}
+		
+	}
+}
+
 /*--------------------------------------------------------------------------------*/
 
 //Displays the content of the descriptor block and free block table.
@@ -660,12 +706,12 @@ int find_block ( char *name, bool directory ) {
 
 	memcpy ( descriptor, disk, BLOCK_SIZE*2 );
 	
-	if ( debug ) printf("\t\t\t[%s] Searching Descriptor for [%s], which is a [%s]\n", __func__, name, directory == true ? "Folder": "File" );
+	if ( debug ) //printf("\t\t\t[%s] Searching Descriptor for [%s], which is a [%s]\n", __func__, name, directory == true ? "Folder": "File" );
 	for ( int i = 0; i < BLOCKS; i++ ) {
 		if ( strcmp(descriptor->name[i], name) ==0 ){
 			//Make sure it is of the type that we are searching for
 			if ( descriptor->directory[i] == directory ) {
-				if ( debug ) printf("\t\t\t[%s] Found [%s] at Memory Block [%d]\n", __func__, name, i );
+				if ( debug ) //printf("\t\t\t[%s] Found [%s] at Memory Block [%d]\n", __func__, name, i );
 				free(descriptor);
 				//Return the block index where the item resides in memory
 				return i;
