@@ -23,7 +23,7 @@
 int debug = 1;	// extra output; 1 = on, 0 = off
 
 int do_root (char *name, char *size);
-int do_print(char *name, char *size);
+int do_print(char *name, char *flag);
 int do_print_vs(char *name, char *size);
 int do_cd(char *name, char *size);
 int do_mkdir(char *name, char *size);
@@ -59,7 +59,7 @@ struct action {
 
 /*--------------------------------------------------------------------------------*/
 void printing(char *name);
-void printing_ls(char *name);
+void printing_ls(char *name, char *flag);
 void print_descriptor ( );
 void parse(char *buf, int *argc, char *argv[]);
 int allocate_block (char *name, bool directory ) ;
@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
       fnm = (n > 1) ? a[1] : dummy;
       fsz = (n > 2) ? a[2] : dummy;
 
-      if (debug) //printf(":%s:%s:%s:\n", cmd, fnm, fsz);
+      //if (debug) printf(":%s:%s:%s:\n", cmd, fnm, fsz);
 
       if (n == 0) continue;	// blank line
 
@@ -251,16 +251,16 @@ int do_root(char *name, char *size)
 
 /*--------------------------------------------------------------------------------*/
 
-int do_print(char *name, char *size)
+int do_print(char *name, char *flag)
 {
 	(void)*name;
-	(void)*size;
+	(void)*flag;
 	if ( disk_allocated == false ) {
 		printf("Error: Disk not allocated\n");
 		return 0;
 	}
 	//Start with the root directory, which is directory type (true)
-	printing_ls(current.directory);
+	printing_ls(current.directory, name);
 	
 	//if (debug) if ( debug ) printf("\n\t[%s] Finished printing\n", __func__);
 	return 0;
@@ -450,7 +450,7 @@ int do_rmdir(char *name, char *size)
 
 /*--------------------------------------------------------------------------------*/
 
-int do_mvdir(char *name, char *size) //"size" is actually the new name
+int do_mvdir(char *name, char *new_name) //"size" is actually the new name
 {
 	if ( disk_allocated == false ) {
 		printf("Error: Disk not allocated\n");
@@ -460,14 +460,14 @@ int do_mvdir(char *name, char *size) //"size" is actually the new name
 	//Rename the directory
 	if ( debug ) printf("\t[%s] Renaming Directory: [%s]\n", __func__, name );
 	//if the directory "name" is not found, return -1
-	if( edit_directory( name, "", size, true, true ) == -1 ) {
+	if( edit_directory( name, "", new_name, true, true ) == -1 ) {
 		if (!debug ) printf( "%s: cannot rename file or directory '%s'\n", "mvdir", name );
 		return 0;
 	}
 	
 	//else the directory is renamed
-	if (debug) printf( "\t[%s] Directory Renamed Successfully: [%s]\n", __func__, size );
-	if (debug) print_directory(size); 
+	if (debug) printf( "\t[%s] Directory Renamed Successfully: [%s]\n", __func__, new_name );
+	if (debug) print_directory(new_name); 
 	return 0;
 }
 
@@ -613,22 +613,53 @@ void printing(char *name) {
 }
 
 //Prints the information of the current directory 
-void printing_ls(char *name) {
+void printing_ls(char *name, char *flag) {
 	//Allocate memory to a dir_type so that we can copy the folder from memory into this variable.
 	dir_type *folder = malloc (BLOCK_SIZE);
 	int block_index = find_block(name, true);
+	char** vector;
+	vector = malloc(folder->subitem_count*sizeof(char*));
+	char *temp;
 
 	memcpy( folder, disk + block_index*BLOCK_SIZE, BLOCK_SIZE);
 		
 	printf("%s:\n", folder->name);
 	for( int i = 0; i < folder->subitem_count; i++ ) {
+		vector[i] = folder->subitem[i];		
+	}
+	
+	if(strcmp(flag, "-a") == 0){
+		for(int i=0; i< folder->subitem_count-1; i++){
+			for(int j=i+1; j< folder->subitem_count; j++){
+				if(strcmp(vector[i], vector[j]) > 0){
+					temp = vector[i];
+					vector[i] = vector[j];
+					vector[j] = temp;
+				}
+			}
+		}
+		for(int i=0; i<folder->subitem_count; i++){
+		printf("\t%s\n", vector[i]);
+		}
+	}
+	else if(strcmp(flag, "-m") == 0){
+		printf("Pendiente");
+	}else{
+		printf("Command flag is invalid\n");
+		
+	}
+
+
+
+	/*for( int i = 0; i < folder->subitem_count; i++ ) {
 		if(folder->subitem_type[i]){
 			printf(ANSI_COLOR_YELLOW"\t%s\n"ANSI_COLOR_RESET, folder->subitem[i]);
 		}else{
 			printf("\t%s\n", folder->subitem[i]);
 		}
-		
-	}
+	}*/
+
+
 }
 
 /*--------------------------------------------------------------------------------*/
