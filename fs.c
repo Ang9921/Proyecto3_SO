@@ -5,23 +5,21 @@
 #include <stdbool.h>
 #include <time.h>
 #include <assert.h>
-/* command	action
- * -------	------
- *  start	initialize root directory
- *  print	print current working directory and all descendants
- *  cd	change current working directory (.. refers to parent directory)
- *  mkdir	sub-directory create 
- *  rmdir	              delete 
- *  mvdir	              rename 
- *  mkfil	file create
- *  rmfil	     delete
- *  mvfil	     rename
- *  szfil	     resize 
- *  exit        quit the program
- * 
+
+/* Comandos
+ *  vs -f	Imprime el disco
+ *  cd	 	Desplazar direcorios
+ *  mkdir	Crear directorio
+ *  rmdir	Eliminar directorio 
+ *  mvdir	Renombrar directorio
+ *  mkfil	Crear archivo
+ *  rmfil	Eliminar archivo
+ *  mvfil	Renombrar archivo
+ *  szfil	Cambiar attributos
+ *  exit    Salir
  */
 
-int debug = 1;	// extra output; 1 = on, 0 = off
+int debug = 1;	
 
 int do_root (char *name, char *size, char *content);
 int do_print(char *name, char *flag, char *content);
@@ -37,13 +35,10 @@ int do_wrfil(char *name, char *size, char *content);
 int do_rdfil(char *name, char *size, char *content);
 int do_szfil(char *name, char *size, char *content);
 int do_exit (char *name, char *size, char *content);
-/*
-    returns 0 (success) or -1 (failure)
-*/
 
 struct action {
-  char *cmd;					// pointer to string
-  int (*action)(char *name, char *size, char* ext);	// pointer to function
+  char *cmd;					
+  int (*action)(char *name, char *size, char* ext);	
 } table[] = {
     { "ls", do_print },
 	{ "vs", do_print_vs },
@@ -58,10 +53,10 @@ struct action {
 	{ "rdfil", do_rdfil },
     { "szfil", do_szfil },
     { "exit" , do_exit  },
-    { NULL, NULL }	// end mark, do not remove ,gives wierd errors! :(
+    { NULL, NULL }
 };
 
-/*--------------------------------------------------------------------------------*/
+
 void printing(char *name);
 void printing_ls(char *name, char *flag);
 void print_descriptor ( );
@@ -95,7 +90,7 @@ char * get_file_top_level ( char*name);
 int get_file_size( char*name);
 void print_file ( char *name);
 
-/************************** Defining Constants for fs *******************/
+
 #define LINESIZE 128
 #define DISK_PARTITION 4000000
 #define BLOCK_SIZE 5000
@@ -118,10 +113,10 @@ typedef struct {
 
 
 typedef struct dir_type {
-	char name[MAX_STRING_LENGTH];		//Name of file or dir
-	char top_level[MAX_STRING_LENGTH];	//Name of directory one level up(immediate parent)
+	char name[MAX_STRING_LENGTH];		
+	char top_level[MAX_STRING_LENGTH];
 	char (*subitem)[MAX_STRING_LENGTH];
-	bool subitem_type[MAX_SUBDIRECTORIES];	//true if directory, false if file
+	bool subitem_type[MAX_SUBDIRECTORIES];
 	int subitem_count;
 	char date[MAX_DATE_LENGTH];	
 	struct dir_type *next;
@@ -130,8 +125,8 @@ typedef struct dir_type {
 
 
 typedef struct file_type {
-	char name[MAX_STRING_LENGTH];		//Name of file or dir
-	char top_level[MAX_STRING_LENGTH];	//Name of directory one level up 
+	char name[MAX_STRING_LENGTH];		
+	char top_level[MAX_STRING_LENGTH];	
 	int data_block_index[MAX_FILE_DATA_BLOCKS];
 	char content[MAX_CONTENT_LENGTH];
 	int data_block_count;
@@ -150,9 +145,7 @@ typedef struct {
 char *disk;
 char dir[100]= "";
 working_directory current;
-bool disk_allocated = false; // makes sure that do_root is first thing being called and only called once
-
-/*--------------------------------------------------------------------------------*/
+bool disk_allocated = false; 
 
 int main(int argc, char *argv[])
 {
@@ -163,15 +156,11 @@ int main(int argc, char *argv[])
     char *cmd, *fnm, *fsz, *fex;
     char dummy[] = "";
 
-	//printf("sizeof file_type = %d\nsizeof dir_type = %d\nsize of descriptor_block = %d\nMAX_FILE_SIZE %d\n", sizeof(file_type), sizeof(dir_type), sizeof(descriptor_block), MAX_FILE_DATA_BLOCKS );
     int n;
     char *a[LINESIZE];
    
    while (fgets(in, LINESIZE, stdin) != NULL)
     {
-      // commands are all of form "cmd filename filesize\n" with whitespace as a delimiter
-
-      // parse input
 	  
       parse(in, &n, a);
 
@@ -179,9 +168,7 @@ int main(int argc, char *argv[])
       fnm = (n > 1) ? a[1] : dummy;
       fsz = (n > 2) ? a[2] : dummy;
 
-      //if (debug) printf(":%s:%s:%s:\n", cmd, fnm, fsz, fex);
-
-      if (n == 0) continue;	// blank line
+      if (n == 0) continue;	
 
       int found = 0;
      
@@ -191,7 +178,6 @@ int main(int argc, char *argv[])
                     found = 1;
                     
                     int ret = (ptr->action)(fnm, fsz, fex);
-                    //every function returns -1 on failure
                     if (ret == -1)
                         { printf("  %s %s %s %s: failed\n", cmd, fnm, fsz, fex); }
                     break;
@@ -205,20 +191,18 @@ int main(int argc, char *argv[])
 }
 
 
-/*--------------------------------------------------------------------------------*/
-
 void parse(char *buf, int *argc, char *argv[])
 {
-  char *delim;          // points to first space delimiter
-  int count = 0;        // number of args
+  char *delim;          
+  int count = 0;        
 
-  char whsp[] = " \t\n\v\f\r";          // whitespace characters
+  char whsp[] = " \t\n\v\f\r";          
 
-  while (1)                             // build the argv list
+  while (1)                             
     {
-      buf += strspn(buf, whsp);         // skip leading whitespace
-      delim = strpbrk(buf, whsp);       // next whitespace char or NULL
-      if (delim == NULL)                // end of line, input parsed
+      buf += strspn(buf, whsp);         
+      delim = strpbrk(buf, whsp);       
+      if (delim == NULL)               
         { break; }
       argv[count++] = buf;              
       *delim = '\0';                    
@@ -231,40 +215,33 @@ void parse(char *buf, int *argc, char *argv[])
   return;
 }
 
-/*--------------------------------------------------------------------------------*/
+/*------------------------------------INICIAR DISCO--------------------------------------------*/
 
-//This function initializes the disk, descriptor within the disk, as well as the root directory.
 int do_root(char *name, char *size, char *content)
 {
 	(void)*name;
 	(void)*size;
 	if ( disk_allocated == true )
 		return 0;
-		
-	//Initialize disk
-	disk = (char*)malloc ( DISK_PARTITION );
-		if ( debug ) printf("\t[%s] Allocating [%d] Bytes of memory to the disk\n", __func__, DISK_PARTITION );
 
-	//Add descriptor and root directory to disk
+	disk = (char*)malloc ( DISK_PARTITION );
+		if ( debug ) printf("Asignando [%d] Bytes de memoria al disco\n", DISK_PARTITION );
+
 	add_descriptor("descriptor");
-		if ( debug ) printf("\t[%s] Creating Descriptor Block\n", __func__ );
 	add_directory("root");
-		if ( debug ) printf("\t[%s] Creating Root Directory\n", __func__ );
 	
-	//Set up the working_directory structure
 	strcpy(current.directory, "root");
 	current.directory_index = 3;
 	strcpy(current.parent, "" );
 	current.parent_index = -1;
-		if ( debug ) printf("\t[%s] Set Current Directory to [%s], with Parent Directory [%s]\n", __func__, "root", "" );
 	
-	if ( debug ) printf("\t[%s] Disk Successfully Allocated\n", __func__ );
+	if ( debug ) printf("Disco listo!\n");
 	disk_allocated = true;
 	
  	return 0;
 }
 
-/*--------------------------------------------------------------------------------*/
+/*-----------------------------------------VISUALIZACION---------------------------------------*/
 
 int do_print(char *name, char *flag, char *content)
 {
@@ -274,14 +251,11 @@ int do_print(char *name, char *flag, char *content)
 		printf("Error: Disk not allocated\n");
 		return 0;
 	}
-	//Start with the root directory, which is directory type (true)
 	printing_ls(current.directory, name);
 	
-	//if (debug) if ( debug ) printf("\n\t[%s] Finished printing\n", __func__);
 	return 0;
 }
 
-/*--------------------------------------------------------------------------------*/
 
 int do_print_vs(char *name, char *size, char *content)
 {
@@ -291,14 +265,12 @@ int do_print_vs(char *name, char *size, char *content)
 		printf("Error: Disk not allocated\n");
 		return 0;
 	}
-	//Start with the root directory, which is directory type (true)
 	printing(current.directory);
 	
-	//if (debug) if ( debug ) printf("\n\t[%s] Finished printing\n", __func__);
 	return 0;
 }
 
-/*--------------------------------------------------------------------------------*/
+/*-------------------------------------------DIRECTORIOS-------------------------------------*/
 
 int do_cd(char *name, char *size, char *content)
 {
@@ -308,27 +280,20 @@ int do_cd(char *name, char *size, char *content)
 		return 0;
 	}
 	
-	//Case if ".." is the argument to "cd"
 	if ( strcmp(name, ".." ) == 0 ) {
-		
-		//If we are in root directory then we can't go back
+
 		if ( strcmp(current.directory, "root") == 0 )
 			return 0;
-		
-		//Adjust the working_directory struct
 		strcpy ( current.directory, current.parent );	
 		strcpy (current.parent, get_directory_top_level( current.parent) );
-			if ( debug ) printf ("\t[%s] Current Directory is now [%s], Parent Directory is [%s]\n", __func__, current.directory, current.parent);
+			//if ( debug ) printf ("\t[%s] Current Directory is now [%s], Parent Directory is [%s]\n", __func__, current.directory, current.parent);
 		return 0;
 	}
 	else
 	{	
 		char tmp[20];
-
-		//Check to make sure it is a subdirectory that is to be changed
-		//If name is not in the current directory then returns -1, else return 0
 		if ( (strcmp(get_directory_subitem(current.directory, -1, name), "-1") == 0) && strcmp( current.parent, name ) != 0 ) {
-			if ( debug ) printf( "\t\t\t[%s] Cannot Change to Directory [%s]\n", __func__, name );
+			//if ( debug ) printf( "\t\t\t[%s] Cannot Change to Directory [%s]\n", __func__, name );
 			if (!debug ) printf( "%s: %s: No such file or directory\n", "cd", name );
 			return 0;
 		}
@@ -340,7 +305,7 @@ int do_cd(char *name, char *size, char *content)
 			//Adjust the working_directory struct
 			strcpy ( current.directory, tmp);
 			strcpy(current.parent, get_directory_top_level(name) );
-				if ( debug ) printf ("\t[%s] Current Directory is now [%s], Parent Directory is [%s]\n", __func__, current.directory, current.parent);
+				//if ( debug ) printf ("\t[%s] Current Directory is now [%s], Parent Directory is [%s]\n", __func__, current.directory, current.parent);
 				char *temp = current.directory;			
 			return 1;
 		}
@@ -349,8 +314,6 @@ int do_cd(char *name, char *size, char *content)
   return 0;
 }
 
-/*--------------------------------------------------------------------------------*/
-
 int do_mkdir(char *name, char *size, char *content)
 {
 	(void)*size;
@@ -358,37 +321,25 @@ int do_mkdir(char *name, char *size, char *content)
 		printf("Error: Disk not allocated\n");
 		return 0;
 	}	
-
-	//If it returns 0, there is a subitem with that name already
 	if ( get_directory_subitem(current.directory, -1, name) == 0  ) {
-			if ( debug ) printf( "\t\t\t[%s] Cannot Make Directory [%s]\n", __func__, name );
+			//if ( debug ) printf( "\t\t\t[%s] Cannot Make Directory [%s]\n", __func__, name );
 			if (!debug ) printf( "%s: cannot create directory '%s': Folder exists\n", "mkdir", name );
 			return 0;
 		}
-	else{
-		printf("mkdir: no se puede crear el directorio «%s»: El archivo ya existe", name);
 
-	}
-
-	//Call add directory
-	if ( debug ) printf("\t[%s] Creating Directory: [%s]\n", __func__, name );
+	//if ( debug ) printf("\t[%s] Creating Directory: [%s]\n", __func__, name );
 	if ( add_directory( name ) != 0 ) {
 		if (!debug ) printf("%s: missing operand\n", "mkdir");
 		return 0;
 	}
-	
-	//Edit the current directory to add our new directory to the current directory's "subdirectory" member. 
-	//NULL ==> for just editing the subdirectory
 	edit_directory( current.directory, name, NULL, false, true );
-		if ( debug ) printf("\t[%s] Updating Parents Subitem content\n", __func__ );
+		//if ( debug ) printf("\t[%s] Updating Parents Subitem content\n", __func__ );
 		
-	if ( debug ) printf("\t[%s] Directory Created Successfully\n", __func__ );
+	if ( debug ) printf(" Created Successfully\n");
 	if( debug ) print_directory(name);
 	
   	return 0;
 }
-
-/*--------------------------------------------------------------------------------*/
 
 int do_rmdir(char *name, char *size, char *content)
 {
@@ -410,51 +361,39 @@ int do_rmdir(char *name, char *size, char *content)
 		return 0;
 	}
 	
-	//Check to make sure it is a subdirectory that is to be changed
-	//If name is not in the current directory then returns -1, else return 0
 	if ( strcmp(get_directory_subitem(current.directory, -1, name), "-1") == 0 ) {
 		if ( debug ) printf( "\t[%s] Cannot Remove Directory [%s]\n", __func__, name );
 		if (!debug ) printf( "%s: %s: No such file or directory\n", "rmdir", name );
 		return 0;
 	}
 	
-	//Remove directory from the parent's subitems.
 	dir_type *folder = malloc ( BLOCK_SIZE );
 	int block_index = find_block(name, true);
 	memcpy( folder, disk + block_index*BLOCK_SIZE, BLOCK_SIZE );
 
 	dir_type *top_folder = malloc ( BLOCK_SIZE );
-
-	//The top_level is created based off the folder 
 	int top_block_index = find_block(folder->top_level, true);
 	memcpy( disk + block_index*BLOCK_SIZE, folder, BLOCK_SIZE );
 	memcpy( top_folder, disk + top_block_index*BLOCK_SIZE, BLOCK_SIZE );
 
-	char subitem_name[MAX_STRING_LENGTH]; // holds the current subitem in the parent directory array
-	const int subcnt = top_folder->subitem_count; // no. of subitems
+	char subitem_name[MAX_STRING_LENGTH]; 
+	const int subcnt = top_folder->subitem_count; 
 	int j;
 	int k=0;
-
-	//iterate through the subitem count
 	for(j = 0; j<subcnt; j++) {
 		strcpy(subitem_name, top_folder->subitem[j]);
 		if (strcmp(subitem_name, name) != 0)
 		{
 			strcpy(top_folder->subitem[k],subitem_name);
-			//printf("------ Subitem [%s] copied ------\n", subitem_name);
 			k++;
 		}
 	}
-	
-	//Remove the directory subitem from the parent
 	strcpy(top_folder->subitem[k], "");
 
 	top_folder->subitem_count--;
 	memcpy( disk + top_block_index*BLOCK_SIZE, top_folder, BLOCK_SIZE );
 	free(top_folder);
-	
-	//Remove the directory with its contents
-	if ( debug ) printf("\t[%s] Removing Directory: [%s]\n", __func__, name );
+	//if ( debug ) printf("\t[%s] Removing Directory: [%s]\n", __func__, name );
 	if( remove_directory( name ) == -1 ) {
 		return 0;
 	}
@@ -463,42 +402,33 @@ int do_rmdir(char *name, char *size, char *content)
 	return 0;
 }
 
-/*--------------------------------------------------------------------------------*/
-
-int do_mvdir(char *name, char *new_name, char *content) //"size" is actually the new name
+int do_mvdir(char *name, char *new_name, char *content) 
 {
 	if ( disk_allocated == false ) {
 		printf("Error: Disk not allocated\n");
 		return 0;
 	}
-
-	//Rename the directory
-	if ( debug ) printf("\t[%s] Renaming Directory: [%s]\n", __func__, name );
-	//if the directory "name" is not found, return -1
+	//if ( debug ) printf("\t[%s] Renaming Directory: [%s]\n", __func__, name );
 	if( edit_directory( name, "", new_name, true, true ) == -1 ) {
 		if (!debug ) printf( "%s: cannot rename file or directory '%s'\n", "mvdir", name );
 		return 0;
 	}
-	
-	//else the directory is renamed
-	if (debug) printf( "\t[%s] Directory Renamed Successfully: [%s]\n", __func__, new_name );
+
+	if (debug) printf( "Directory Renamed Successfully: [%s]\n", new_name );
 	if (debug) print_directory(new_name); 
 	return 0;
 }
 
-/*--------------------------------------------------------------------------------*/
+/*------------------------------------------ARCHIVOS--------------------------------------*/
 
 int do_mkfil(char *name, char *size, char *content)
 {
-	printf("EL CONTENIDO CAPATADO ES %s", content);
 	if ( disk_allocated == false ) {
 		printf("Error: Disk not allocated\n");
 		return 0;
 	}
 	
-	if ( debug ) printf("\t[%s] Creating File: [%s], with Size: [%s]\n", __func__, name, size );
-	
-	//If it returns 0, there is a subitem with that name already
+	//if ( debug ) printf("\t[%s] Creating File: [%s], with Size: [%s]\n", __func__, name, size );
 	if ( get_directory_subitem(current.directory, -1, name) == 0  ) {
 			if ( debug ) printf( "\t\t\t[%s] Cannot make file [%s], a file or directory [%s] already exists content [%s]\n", __func__, name, name, content);
 			if (!debug ) printf( "%s: cannot create file '%s': File exists\n", "mkfil", name );
@@ -507,18 +437,12 @@ int do_mkfil(char *name, char *size, char *content)
 	
 	if ( add_file ( name, atoi(size), content) != 0 )
 		return 0;
-	
-	//Edit the current directory to add our new file to the current directory's "subdirectory" member.
   	edit_directory( current.directory, name, NULL, false, false);
-  		if ( debug ) printf("\t[%s] Updating Parents Subitem content\n", __func__ );
+  		//if ( debug ) printf("\t[%s] Updating Parents Subitem content\n", __func__ );
   	
   	if ( debug ) print_file(name);
   	return 0; 
 	  }
-
-/*--------------------------------------------------------------------------------*/
-
-// Remove a file
 int do_rmfil(char *name, char *size, char *content)
 {
 	if ( disk_allocated == false ) {
@@ -527,23 +451,19 @@ int do_rmfil(char *name, char *size, char *content)
 	}
 	
 	(void)*size;
-	if ( debug ) printf("\t[%s] Removing File: [%s]\n", __func__, name);
+	//if ( debug ) printf("\t[%s] Removing File: [%s]\n", __func__, name);
 
-		//If the file to be removed actually exists in current directory, remove it
 	if ( get_directory_subitem(current.directory, -1, name) == 0  ) {
 			remove_file(name);
 			return 0;
 		}
-	else{ // If it doesn't exist, print error and return 0
+	else{ 
 		if ( debug ) printf( "\t\t\t[%s] Cannot remove file [%s], it does not exist in this directory\n", __func__, name );
 		if (!debug ) printf( "%s: %s: No such file or directory\n", "rmfil", name );
 		return 0;
 	}
 }
 
-/*--------------------------------------------------------------------------------*/
-
-// Rename a file
 int do_mvfil(char *name, char *size, char *content)
 {
 	if ( disk_allocated == false ) {
@@ -553,7 +473,6 @@ int do_mvfil(char *name, char *size, char *content)
 	
 	if ( debug ) printf("\t[%s] Renaming File: [%s], to: [%s]\n", __func__, name, size );
 
-	//If it returns 0, there is a subitem with that name already
 	if ( get_directory_subitem(current.directory, -1, size) == 0  ) {
 			if ( debug ) printf( "\t\t\t[%s] Cannot rename file [%s], a file or directory [%s] already exists [%s]\n", __func__, name, size,content );
 			if (!debug ) printf( "%s: cannot rename file or directory '%s'\n", "mvfil", name ); 
@@ -566,9 +485,6 @@ int do_mvfil(char *name, char *size, char *content)
 	if (debug) print_file(size);
 }
 
-/*--------------------------------------------------------------------------------*/
-
-// Rename a file
 int do_wrfil(char *name, char *size, char *content)
 {
 		if ( disk_allocated == false ) {
@@ -576,8 +492,7 @@ int do_wrfil(char *name, char *size, char *content)
 		return 0;
 	}
 	
-	if ( debug ) printf("\t[%s] Adding content [%s] to File: [%s]\n", __func__, size, name );
-	//remove file; make new file with updated size
+	//if ( debug ) printf("\t[%s] Adding content [%s] to File: [%s]\n", __func__, size, name );
 	if (remove_file(name) != -1)  do_mkfil(name, size, size);
 
 	else {
@@ -588,26 +503,19 @@ int do_wrfil(char *name, char *size, char *content)
 	return 0;
 }
 
-/*--------------------------------------------------------------------------------*/
-
-// Read a file
 int do_rdfil(char *name, char *size, char *content)
 {
 	if ( disk_allocated == false ) {
 		printf("Error: Disk not allocated\n");
 		return 0;
-	}
-	
-	if ( debug ) printf("\t[%s] Renaming File: [%s], to: [%s]\n", __func__, name, size );
-
+	}	
+	//if ( debug ) printf("\t[%s] Renaming File: [%s], to: [%s]\n", __func__, name, size );
 	//If it returns 0, there is a subitem with that name already
 	if ( get_directory_subitem(current.directory, -1, size) == 0  ) {
 			if ( debug ) printf( "\t\t\t[%s] Cannot rename file [%s], a file or directory [%s] already exists [%s]\n", __func__, name, size,content );
 			if (!debug ) printf( "%s: cannot rename file or directory '%s'\n", "mvfil", name ); 
 			return 0;
 		}
-
-	printf("A ver %s y contenido %s", name, content);
 	file_type *file = malloc ( BLOCK_SIZE);
 	
 	//Find the block in memory where this file is written	
@@ -616,17 +524,13 @@ int do_rdfil(char *name, char *size, char *content)
 		if ( debug ) printf("\t\t\t[%s] File [%s] not found\n", __func__, name);
 		return -1;
 	}
-	if (debug) printf("\t\t[%s] File [%s] Found At Memory Block [%d]\n", __func__, name, block_index);
+	//if (debug) printf("\t\t[%s] File [%s] Found At Memory Block [%d]\n", __func__, name, block_index);
 
 	memcpy( file, disk + block_index*BLOCK_SIZE, BLOCK_SIZE);
-	printf("[%d] [%s] [%s]\n",file->size, file->date, file->content);
+	printf("[%s]\n",file->content);
 	free(file);
 	return 0;
 }
-
-/*--------------------------------------------------------------------------------*/
-
-// Resize a file -- addon to be implemented
 int do_szfil(char *name, char *size, char *content)
 {
 	if ( disk_allocated == false ) {
@@ -634,8 +538,7 @@ int do_szfil(char *name, char *size, char *content)
 		return 0;
 	}
 	
-	if ( debug ) printf("\t[%s] Resizing File: [%s], to: [%s]\n", __func__, name, size );
-	//remove file; make new file with updated size
+	//if ( debug ) printf("\t[%s] Resizing File: [%s], to: [%s]\n", __func__, name, size );
 	if (remove_file(name) != -1)  do_mkfil(name, size,content);
 
 	else {
@@ -646,7 +549,7 @@ int do_szfil(char *name, char *size, char *content)
 	return 0;
 }
 
-/*--------------------------------------------------------------------------------*/
+/*---------------------------------------------SALIR-----------------------------------*/
 
 int do_exit(char *name, char *size, char *content)
 {
@@ -657,14 +560,9 @@ int do_exit(char *name, char *size, char *content)
 	return 0;
 }
 
-/*--------------------------------------------------------------------------------*/
+/******************************* 		FUNCIONES AUXILIARES *****************************/
 
-
-/******************************* Helper Functions Start *****************************/
-
-//Prints the information of directories and files starting at the root
 void printing(char *name) {
-	//Allocate memory to a dir_type so that we can copy the folder from memory into this variable.
 	dir_type *folder = malloc (BLOCK_SIZE);
 	int block_index = find_block(name, true);
 
@@ -674,19 +572,14 @@ void printing(char *name) {
 	for( int i = 0; i < folder->subitem_count; i++ ) {
 		 printf("\t%s\n", folder->subitem[i]);
 	}
-
-	//Go through again if there is a subdirectory
 	for( int i = 0; i < folder->subitem_count; i++ ) {
 		if( folder->subitem_type[i] == true ) {
-			//Recursively call the function! can be improved further ;)
 			printing(folder->subitem[i]);
 		}
 	}
 }
 
-//Prints the information of the current directory 
 void printing_ls(char *name, char *flag) {
-	//Allocate memory to a dir_type so that we can copy the folder from memory into this variable.
 	dir_type *folder = malloc (BLOCK_SIZE);
 	file_type *file = malloc( BLOCK_SIZE);
 	int block_index = find_block(name, true);
@@ -724,67 +617,20 @@ void printing_ls(char *name, char *flag) {
 	}
 	else if(strcmp(flag, "-m") == 0){
 		for( int i = 0; i < folder->subitem_count; i++ ) {
-		if(find_block(folder->subitem[i], true) == -1){
+		if(find_block(folder->subitem[i], true) != -1){
 			printf(ANSI_COLOR_YELLOW"\t%s\n"ANSI_COLOR_RESET, folder->subitem[i]);
 		}else{
 			printf("\t%s\n", folder->subitem[i]);
 		}
 	}
-		/*
-		for( int i = 0; i < folder->subitem_count; i++ ) {
-			if(folder->subitem_type[i]){
-				printf("EL QUE ENCONTRE ES %s\n",folder->date);
-				vector2[i] = folder->date;
-			}else{
-				int block_index = find_block(folder->subitem[i], false);
-				memcpy( file, disk + block_index*BLOCK_SIZE, BLOCK_SIZE);
-				printf("EL QUE ENCONTRE ES %s\n",file->date);
-				vector2[i] = file->date;
-			}
-		
-		}
-
-		for(int i=0; i< folder->subitem_count-1; i++){
-			for(int j=i+1; j< folder->subitem_count; j++){
-				if(strcmp(vector2[i], vector2[j]) > 0){
-					temp = vector2[i];
-					vector2[i] = vector2[j];
-					vector2[j] = temp;
-				}
-			}
-		}
-
-		for( int i = 0; i < folder->subitem_count; i++ ) {
-			for( int j = 0; j < folder->subitem_count; j++ ) {
-				int block_index = find_block(folder->subitem[j], false);
-				memcpy( file, disk + block_index*BLOCK_SIZE, BLOCK_SIZE);
-				if(strcmp(vector2[i], file->date)){
-					printf("\t%s\n", file->name);
-				}		
-			}
-		}*/
-
 		
 	}else{
 		printf("Command flag is invalid\n");
 		return; 
 	}
 
-
-
-	/*for( int i = 0; i < folder->subitem_count; i++ ) {
-		if(folder->subitem_type[i]){
-			printf(ANSI_COLOR_YELLOW"\t%s\n"ANSI_COLOR_RESET, folder->subitem[i]);
-		}else{
-			printf("\t%s\n", folder->subitem[i]);
-		}
-	}*/
-
 }
 
-/*--------------------------------------------------------------------------------*/
-
-//Displays the content of the descriptor block and free block table.
 void print_descriptor ( ) {
 	descriptor_block *descriptor = malloc( BLOCK_SIZE*2 );
 
@@ -799,27 +645,19 @@ void print_descriptor ( ) {
 	free(descriptor);
 }
 
-/*--------------------------------------------------------------------------------*/
-
-//finds the first free block on the disk; the free block index is returned
 int allocate_block ( char *name, bool directory ) { 
 
 	descriptor_block *descriptor = malloc( BLOCK_SIZE*2);
-
 	memcpy ( descriptor, disk, BLOCK_SIZE*2 );
-	
-	//Goes through every block until free one is found	
-	if ( debug ) printf("\t\t\t[%s] Finding Free Memory Block in the Descriptor\n", __func__ );
+
+	//if ( debug ) printf("\t\t\t[%s] Finding Free Memory Block in the Descriptor\n", __func__ );
 	for ( int i = 0; i < BLOCKS; i++ ) {
 		 if ( descriptor->free[i] ) {
-		 	//Once free block is found, update descriptor information
 			descriptor->free[i] = false;
 			descriptor->directory[i] = directory;
 			strcpy(descriptor->name[i], name);
-			
-			//update descriptor back to the beginning of the disk
 			memcpy(disk, descriptor, BLOCK_SIZE*2);
-				if ( debug ) printf("\t\t\t[%s] Allocated [%s] at Memory Block [%d]\n", __func__, name, i );
+				//if ( debug ) printf("\t\t\t[%s] Allocated [%s] at Memory Block [%d]\n", __func__, name, i );
 
 			free(descriptor);
 			return i; 
@@ -830,15 +668,10 @@ int allocate_block ( char *name, bool directory ) {
 	return -1;
 }
 
-/*--------------------------------------------------------------------------------*/
-
-//updates the descriptor block on disk to reflect that the block is no longer in use. 
 void unallocate_block ( int offset ) { 
 	descriptor_block *descriptor = malloc( BLOCK_SIZE*2 );
 	
 	memcpy ( descriptor, disk, BLOCK_SIZE*2 );
-	
-	//TODO: check if the block holds a file, and then unallocate all its sub-block
 	if ( debug ) printf("\t\t\t[%s] Unallocating Memory Block [%d]\n", __func__, offset );
 	descriptor->free[offset] = true;
 	strcpy( descriptor->name[offset], "" );
@@ -848,191 +681,120 @@ void unallocate_block ( int offset ) {
 	free(descriptor);
 }
 
-/*--------------------------------------------------------------------------------*/
-
-//Takes in a name, and searches through descriptor block to find the block that contains the item
 int find_block ( char *name, bool directory ) {
-
 	descriptor_block *descriptor = malloc( BLOCK_SIZE*2 );
-
 	memcpy ( descriptor, disk, BLOCK_SIZE*2 );
-	
-	if ( debug ) //printf("\t\t\t[%s] Searching Descriptor for [%s], which is a [%s]\n", __func__, name, directory == true ? "Folder": "File" );
 	for ( int i = 0; i < BLOCKS; i++ ) {
 		if ( strcmp(descriptor->name[i], name) ==0 ){
-			//Make sure it is of the type that we are searching for
 			if ( descriptor->directory[i] == directory ) {
-				if ( debug ) //printf("\t\t\t[%s] Found [%s] at Memory Block [%d]\n", __func__, name, i );
+				if ( debug )
 				free(descriptor);
-				//Return the block index where the item resides in memory
 				return i;
 			}
 		}
 	}
 	
 	free(descriptor);
-	//if ( debug ) printf("\t\t\t[%s] Block Not Found: Returning -1\n", __func__);
 	return -1;
 }
 
-/*--------------------------------------------------------------------------------*/
-
 int add_descriptor ( char * name ) {
-	//Allocate memory to a descriptor_block type so that we start assigning values to its members.
 	descriptor_block *descriptor = malloc( BLOCK_SIZE*2);
-		if ( debug ) printf("\t\t[%s] Allocating Space for Descriptor Block\n", __func__);
-	
-	//Allocate memory to the array of strings within the descriptor block, which holds the name of each block
+		//if ( debug ) printf("\t\t[%s] Allocating Space for Descriptor Block\n", __func__);
 	descriptor->name = malloc ( sizeof*name*BLOCKS );
-		if ( debug ) printf("\t\t[%s] Allocating Space for Descriptor's Name Member\n", __func__);
-	
-	//initialize each block ==> that it is free
-	if ( debug ) printf("\t\t[%s] Initializing Descriptor to Have All of Memory Available\n", __func__);
+		//if ( debug ) printf("\t\t[%s] Allocating Space for Descriptor's Name Member\n", __func__);
+	//if ( debug ) printf("\t\t[%s] Initializing Descriptor to Have All of Memory Available\n", __func__);
 	for (int i = 0; i < BLOCKS; i++ ) {
 		descriptor->free[i] = true;
 		descriptor->directory[i] = false;
 	}
-
-	//descriptor occupied space on the disk 
 	int limit = (int)(sizeof(descriptor_block)/BLOCK_SIZE) + 1;
 	
-	if ( debug ) printf("\t\t[%s] Updating Descriptor to Show that first [%d] Memory Blocks Are Taken\n", __func__, limit+1);
+	//if ( debug ) printf("\t\t[%s] Updating Descriptor to Show that first [%d] Memory Blocks Are Taken\n", __func__, limit+1);
 	for ( int i = 0; i < limit; i ++ ) {
-		descriptor->free[i]= false; //marking space occupied by descriptor as used
-	}
-	
+		descriptor->free[i]= false;
+	}	
 	strcpy(descriptor->name[0], "descriptor"); 	
-	
-	//writing new updated descriptor to the beginning of the disk
-	//may encounter error here, to be fixed
 	memcpy ( disk, descriptor, (BLOCK_SIZE*(limit+1)));
 
 	return 0;	
 }
-
-/*--------------------------------------------------------------------------------*/
-
-//Allows us to directly update values in the descriptor block. 
 int edit_descriptor ( int free_index, bool free, int name_index, char * name ) {
 
 	descriptor_block *descriptor = malloc( BLOCK_SIZE*2 );
-	
-	//Copy descriptor on disk to our descriptor_block type, 
 	memcpy ( descriptor, disk, BLOCK_SIZE*2 );
-
-	//Each array in the descriptor block will be updated
 	if ( free_index > 0 ) {
 		descriptor->free[free_index] = free;
-			if ( debug ) printf("\t\t[%s] Descriptor Free Member now shows Memory Block [%d] is [%s]\n", __func__, free_index, free == true ? "Free": "Used");
+			//if ( debug ) printf("\t\t[%s] Descriptor Free Member now shows Memory Block [%d] is [%s]\n", __func__, free_index, free == true ? "Free": "Used");
 	}
 	if ( name_index > 0 ) {
 		strcpy(descriptor->name[name_index], name );
-			if ( debug ) printf("\t\t[%s] Descriptor Name Member now shows Memory Block [%d] has Name [%s]\n", __func__, name_index, name);	
+			//if ( debug ) printf("\t\t[%s] Descriptor Name Member now shows Memory Block [%d] has Name [%s]\n", __func__, name_index, name);	
 	}
-		
-	// write the new updated descriptor back to the beginning of the disk
 	memcpy(disk, descriptor, BLOCK_SIZE*2);
-
 	return 0;
 }
 
-/*--------------------------------------------------------------------------------*/
-
-// This changes the name of a file in the descriptor; used for moving files;
 int edit_descriptor_name (int index, char* new_name,char *content)
 {
 	descriptor_block *descriptor = malloc( BLOCK_SIZE*2 );
-
 	memcpy ( descriptor, disk, BLOCK_SIZE*2 );
-
-	// Change the name of the file at index to the new_name
 	strcpy(descriptor->name[index], new_name);
-
 	memcpy(disk, descriptor, BLOCK_SIZE*2);
-
 	free(descriptor);
 	return 0;
 }
-/*--------------------------------------------------------------------------------*/
-
-// This changes the name of a file in the descriptor; used for moving files;
 int edit_descriptor_name2 (int index, char* content,char *new_name)
 {
 	descriptor_block *descriptor = malloc( BLOCK_SIZE*2 );
-
 	memcpy ( descriptor, disk, BLOCK_SIZE*2 );
-
-	// Change the name of the file at index to the new_name
 	strcpy(descriptor->name[index], content);
-
 	memcpy(disk, descriptor, BLOCK_SIZE*2);
-
 	free(descriptor);
 	return 0;
 }
-/*--------------------------------------------------------------------------------*/
 
-//Allows us to add a folder to the disk.
+/*******************************************AUXILIARES DIRECTORIOS*****************************/
 int add_directory( char * name ) {
 	
 	if ( strcmp(name,"") == 0 ) {
 		if ( debug ) printf("\t\t[%s] Invalid Command\n", __func__ );
 		return -1;
 	}
-	
-	//Allocating memory for new folder
 	dir_type *folder = malloc ( BLOCK_SIZE);
-		if ( debug ) printf("\t\t[%s] Allocating Space for New Folder\n", __func__);
-	//Calculating time
+		//if ( debug ) printf("\t\t[%s] Allocating Space for New Folder\n", __func__);
 	time_t t = time(NULL);
 	struct tm *tm = localtime(&t);
 	char s[64];
 	assert(strftime(s, sizeof(s), "%c", tm));
-	//Initialize all the members of our new file		
-	//Initialize our new folder
 	strcpy(folder->name, name);					
 	strcpy(folder->top_level, current.directory);
 	strcpy( folder->date, s);
 	folder->subitem = malloc ( sizeof*(folder->subitem)*MAX_SUBDIRECTORIES);
-	folder->subitem_count = 0;					// Imp : Initialize subitem array to have 0 elements
-	
-
-	//Find free block in disk to store our folder; true => mark the block as directory
+	folder->subitem_count = 0;	
 	int index = allocate_block(name, true);
-		if ( debug ) printf("\t\t[%s] Assigning New Folder to Memory Block [%d]\n", __func__, index);
-		
-	//Copy our folder to the disk
+		//if ( debug ) printf("\t\t[%s] Assigning New Folder to Memory Block [%d]\n", __func__, index);
 	memcpy( disk + index*BLOCK_SIZE, folder, BLOCK_SIZE);
 	
-	if ( debug ) printf("\t\t[%s] Folder [%s] Successfully Added\n", __func__, name);
+	//if ( debug ) printf("\t\t[%s] Folder [%s] Successfully Added\n", __func__, name);
 	free(folder);
 	return 0;
 }
-
-/*--------------------------------------------------------------------------------*/
-
-//Allows to remove a directory folder from the disk.
 int remove_directory( char * name ) {
 	
 	dir_type *folder = malloc (BLOCK_SIZE);
 	int block_index = find_block(name, true);
-	
-	//If there was no subdirectory found, then return -1
 	if( block_index == -1 ) {
 		if ( debug ) printf("\t\t[%s] Directory [%s] does not exist in the current folder [%s]\n", __func__, name, current.directory);
 		return -1;
 	}
 
 	memcpy( folder, disk + block_index*BLOCK_SIZE, BLOCK_SIZE );
-
-	//Go through again if there is a subdirectory ==> as implemented in Unix
 	for( int i = 0; i < folder->subitem_count; i++ ) {
 		if( folder->subitem_type[i] == true ) {
-			//Recursively call the function to remove the subitem
 			remove_directory(folder->subitem[i]);
 		}
 		else {
-			//Remove the subitem that is a file
 			remove_file(folder->subitem[i]);
 		}
 	}
@@ -1042,49 +804,40 @@ int remove_directory( char * name ) {
 	return 0;
 }
 
-/*--------------------------------------------------------------------------------*/
-
-//Allows you to directly add items to a folders subitem array, or change the folder's name
 int edit_directory (char * name,  char*subitem_name, char *new_name, bool name_change, bool directory ) {
 	
 	if( strcmp(name,"") == 0 ) {
 		if( debug ) printf("\t\t[%s] Invalid Command\n", __func__ );
 		return -1;
 	}
-
 	dir_type *folder = malloc ( BLOCK_SIZE);
-	
-	//Find where the folder is on disk	
 	int block_index = find_block(name, true);
-	//If the directory is not found, should return
 	if( block_index == -1 ) {
 		if ( debug ) printf("\t\t[%s] Directory [%s] does not exist\n", __func__, name);
 		return -1;
 	}
-		if ( debug ) printf("\t\t[%s] Folder [%s] Found At Memory Block [%d]\n", __func__, name, block_index);
+		//if ( debug ) printf("\t\t[%s] Folder [%s] Found At Memory Block [%d]\n", __func__, name, block_index);
 	
 	memcpy( folder, disk + block_index*BLOCK_SIZE, BLOCK_SIZE);
 
-	if ( strcmp(subitem_name, "") != 0 ) {	//Case that we are adding subitem to the descriptor block
+	if ( strcmp(subitem_name, "") != 0 ) {
 		
-		if ( !name_change ) {     //Case adding subitem
-			if ( debug ) printf("\t\t[%s] Added Subitem [%s] at Subitem index [%d] to directory [%s]\n", __func__, subitem_name, folder->subitem_count, folder->name );
+		if ( !name_change ) { 
+			//if ( debug ) printf("\t\t[%s] Added Subitem [%s] at Subitem index [%d] to directory [%s]\n", __func__, subitem_name, folder->subitem_count, folder->name );
 			strcpy (folder->subitem[folder->subitem_count], subitem_name );
 			folder->subitem_type[folder->subitem_count] = directory;
 			folder->subitem_count++;
-				if ( debug ) printf("\t\t[%s] Folder [%s] Now Has [%d] Subitems\n", __func__, name, folder->subitem_count);
-
-			//update the disk too!	
+				//if ( debug ) printf("\t\t[%s] Folder [%s] Now Has [%d] Subitems\n", __func__, name, folder->subitem_count);
 			memcpy( disk + block_index*BLOCK_SIZE, folder, BLOCK_SIZE);
 			
 			free(folder);
 			return 0;
 		}
-		else {				//Case editing a subitem's name
+		else {
 			for ( int i =0; i < folder->subitem_count; i++ ) {
 				if ( strcmp(folder->subitem[i], subitem_name) == 0 ) {
 					strcpy( folder->subitem[i], new_name);
-						if ( debug ) printf("\t\t[%s] Edited Subitem [%s] to [%s] at Subitem index [%d] for directory [%s]\n", __func__, subitem_name, new_name, i, folder->name );	
+						//if ( debug ) printf("\t\t[%s] Edited Subitem [%s] to [%s] at Subitem index [%d] for directory [%s]\n", __func__, subitem_name, new_name, i, folder->name );	
 
 					memcpy( disk + block_index*BLOCK_SIZE, folder, BLOCK_SIZE);
 					free(folder);
@@ -1092,38 +845,29 @@ int edit_directory (char * name,  char*subitem_name, char *new_name, bool name_c
 				}
 			}
 
-			if ( debug ) printf("\t\t[%s] Subitem Does Not Exist in Directory [%s]\n", __func__, folder->name );
+			//if ( debug ) printf("\t\t[%s] Subitem Does Not Exist in Directory [%s]\n", __func__, folder->name );
 			free(folder);
 			return -1;
 		}
 	}
-	else {						//Case we are changing the folders name
-		//if directory with given name already exists, don't allow
+	else {
 		int block_index2 = find_block(new_name, true);
-
-		//If the directory for the new name already exists, should return -1
 		if( block_index2 != -1 ) {
 			if ( debug ) printf("\t\t[%s] Directory [%s] already exists. Choose a different name\n", __func__, new_name);
 			return -1;
-		}
-	
+		}	
 		strcpy(folder->name, new_name );
 			if ( debug ) printf("\t\t[%s] Folder [%s] Now Has Name [%s]\n", __func__, name, folder->name);
 		
 		memcpy( disk + block_index*BLOCK_SIZE, folder, BLOCK_SIZE);
-		
-		//edit descriptors
+
 		edit_descriptor(-1, false, block_index, new_name );
 			if ( debug ) printf("\t\t[%s] Updated Descriptor's Name Member\n", __func__);
 			if ( debug ) print_directory(folder->name);
-		
-		//changing parents name
 		edit_directory(folder->top_level, name, new_name, true, true );
 			if ( debug ) printf("\t\t[%s] Updated Parents Subitem Name\n", __func__);
 		
 		int child_index;
-
-		//Iterates through to change the subitems' top_level name
 		for ( int i = 0; i < folder->subitem_count; i++) {
 			file_type *child_file = malloc ( BLOCK_SIZE);
 			dir_type *child_folder = malloc ( BLOCK_SIZE);
@@ -1139,7 +883,6 @@ int edit_directory (char * name,  char*subitem_name, char *new_name, bool name_c
 				free ( child_file );
 			}
 			else {
-				//if type == file
 				memcpy( child_file, disk + child_index*BLOCK_SIZE, BLOCK_SIZE);
 				strcpy( child_file->top_level, new_name );
 			
@@ -1156,9 +899,7 @@ int edit_directory (char * name,  char*subitem_name, char *new_name, bool name_c
 	free ( folder );
 }
 
-/*--------------------------------------------------------------------------------*/
-
-//Allows us to add a file to our disk; This function will allocate this file descriptor block (holds file info), as well as data blocks 
+/*-------------------------------------------------AUXILIARES ARCHIVOS-------------------------------*/
 int add_file( char * name, int size, char * content) {
 	char subname[20];
 	
@@ -1167,46 +908,33 @@ int add_file( char * name, int size, char * content) {
 		if (!debug ) printf("%s: missing operand\n", "mkfil");
 		return 1;
 	}
-		
-	
-	//Allocate memory to a file_type
 	file_type *file = malloc ( BLOCK_SIZE );
-		if ( debug ) printf("\t\t[%s] Allocating Space for New File\n", __func__);
-
-	//Calculating time
+		//if ( debug ) printf("\t\t[%s] Allocating Space for New File\n", __func__);
 	time_t t = time(NULL);
 	struct tm *tm = localtime(&t);
 	char s[64];
 	assert(strftime(s, sizeof(s), "%c", tm));
-	//Initialize all the members of our new file
 	strcpy( file->name, name);	
 	strcpy( file->content, content);	
 	strcpy ( file->top_level, current.directory );
 	file->size = size;
 	strcpy( file->date, s);		
 	file->data_block_count = 0;
-		if ( debug ) printf("\t\t[%s] Initializing File Members\n", __func__);
-				
-	//Find free block to put this file descriptor block in memory, false ==> indicates a file
+		//if ( debug ) printf("\t\t[%s] Initializing File Members\n", __func__);
 	int index = allocate_block(name, false);
-	
-	//Find free blocks to put the file data into
-	if ( debug ) printf("\t\t[%s] Allocating [%d] Data Blocks in Memory for File Data\n", __func__, (int)size/BLOCK_SIZE);
+	//if ( debug ) printf("\t\t[%s] Allocating [%d] Data Blocks in Memory for File Data\n", __func__, (int)size/BLOCK_SIZE);
 	for ( int i = 0; i < size/BLOCK_SIZE + 1; i++ ) {
 		sprintf(subname, "%s->%d", name, i);
 		file->data_block_index[i] = allocate_block(subname, false);
 		file->data_block_count++;
 	}  
-	//data blocks in memory not copied to disk
 	memcpy( disk + index*BLOCK_SIZE, file, BLOCK_SIZE);
 	
-	if ( debug ) printf("\t\t[%s] File [%s] Successfully Added\n", __func__, name);
+	//if ( debug ) printf("\t\t[%s] File [%s] Successfully Added\n", __func__, name);
 	
 	free(file);
 	return 0;
 }
-
-/*--------------------------------------------------------------------------------*/
 
 int remove_file (char* name)
 {
@@ -1220,34 +948,27 @@ int remove_file (char* name)
 	dir_type *folder = malloc ( BLOCK_SIZE);
 	
 	int file_index = find_block(name, false);
-	
-	// If the file is not found, error, return -1
 	if ( file_index == -1 )  {
 		if ( debug ) printf("\t\t\t[%s] File [%s] not found\n", __func__, name);
 		return -1;
 	}
 	
-	if ( debug ) printf("\t\t[%s] File [%s] Found At Memory Block [%d]\n", __func__, name, file_index);
+	//if ( debug ) printf("\t\t[%s] File [%s] Found At Memory Block [%d]\n", __func__, name, file_index);
 	
 	memcpy( file, disk + file_index*BLOCK_SIZE, BLOCK_SIZE);
-	
-	//Find the top_level folder on disk
+
 	int folder_index = find_block(file->top_level, true);
 	
-	if ( debug ) printf("\t\t[%s] Folder [%s] Found At Memory Block [%d]\n", __func__, name, folder_index);
+	//if ( debug ) printf("\t\t[%s] Folder [%s] Found At Memory Block [%d]\n", __func__, name, folder_index);
 	memcpy( folder, disk + folder_index*BLOCK_SIZE, BLOCK_SIZE);
-	
-	
-	// Go through the parent directory's subitem array and remove our file
 	char subitem_name[MAX_STRING_LENGTH]; 
-	const int subcnt = folder->subitem_count; // no of subitems
+	const int subcnt = folder->subitem_count;
 	int j;
 	int k=0;
 	for(j = 0; j<subcnt; j++)
 		{
 			strcpy(subitem_name, folder->subitem[j]);
 			if (strcmp(subitem_name, name) != 0) 
-			// if this element is not the one we are removing, copy back
 			{
 				strcpy(folder->subitem[k],subitem_name);
 				k++;
@@ -1256,10 +977,7 @@ int remove_file (char* name)
 	strcpy(folder->subitem[k], "");
 	folder->subitem_count--;
 
-	memcpy(disk + folder_index*BLOCK_SIZE, folder, BLOCK_SIZE); // Update the folder in memory
-
-
-	//Imp :  Unallocate all of the data blocks from the file that we are deleting
+	memcpy(disk + folder_index*BLOCK_SIZE, folder, BLOCK_SIZE);
 	int i = 0;
 	while(file->data_block_count != 0)
 	{
@@ -1268,95 +986,71 @@ int remove_file (char* name)
 		i++;
 	}
 	
-	unallocate_block(file_index); // Deallocate the file control block
+	unallocate_block(file_index);
 	
 	free(folder);
 	free(file);
 	return 0;
 }
-
-/*--------------------------------------------------------------------------------*/
-
-//Allows you to directly edit a file and change its size or its name
 int edit_file ( char * name, int size, char *new_name, char *content) {
 	file_type *file = malloc ( BLOCK_SIZE);
-	//Calculating time
 	time_t t = time(NULL);
 	struct tm *tm = localtime(&t);
 	char s[64];
 	assert(strftime(s, sizeof(s), "%c", tm));	
-	//Find the block in memory where this file is written	
 	int block_index = find_block(name, false);
 	if ( block_index == -1 )  {
 		if ( debug ) printf("\t\t\t[%s] File [%s] not found\n", __func__, name);
 		return -1;
 	}
-	if ( debug ) printf("\t\t[%s] File [%s] Found At Memory Block [%d]\n", __func__, name, block_index);
+	//if ( debug ) printf("\t\t[%s] File [%s] Found At Memory Block [%d]\n", __func__, name, block_index);
 
 	memcpy( file, disk + block_index*BLOCK_SIZE, BLOCK_SIZE);
 	
 	if ( size > 0 ) { 
-		//If size is greater than zero, then the files size will be updated
-		
 		strcpy( file->date, s);
-		if ( debug ) printf("\t\t[%s] File [%s] Now Has Size [%d]\n", __func__, name, size);
+		//if ( debug ) printf("\t\t[%s] File [%s] Now Has Size [%d]\n", __func__, name, size);
 		free(file);
 		return 0;
 	}
 	else {		  
-		//Otherwise, the file's name will be updated
 		char top_level[MAX_STRING_LENGTH];
 		strcpy(top_level, get_file_top_level(name));
 		file->size = size;
-		// Change the name of the directory's subitem
 		edit_directory_subitem(top_level, name, new_name, content); 
-
-		// Change the name of the actual file descriptor
 		edit_descriptor_name(block_index, new_name, content); 
 
 		strcpy(file->name, new_name );
 		memcpy( disk + block_index*BLOCK_SIZE, file, BLOCK_SIZE);	
 
-		if ( debug ) printf("\t\t\t[%s] File [%s] Now Has Name [%s] and Date [%s]\n", __func__, name, file->name, file->date);
+		//if ( debug ) printf("\t\t\t[%s] File [%s] Now Has Name [%s] and Date [%s]\n", __func__, name, file->name, file->date);
 
 		free(file);
 		return 0;
 	}
 }
 
-/*--------------------------------------------------------------------------------*/
-
-/*--------------------------------------------------------------------------------*/
-
-//Allows you to directly edit a file and change its size or its name
 int edit_file2 ( char * name, char* content, int size, int new_name) {
-	printf("A ver %s y contenido %s", name, content);
 	file_type *file = malloc ( BLOCK_SIZE);
 	
-	//Find the block in memory where this file is written	
 	int block_index = find_block(name, false);
 	if ( block_index == -1 )  {
 		if ( debug ) printf("\t\t\t[%s] File [%s] not found\n", __func__, name);
 		return -1;
 	}
-	if ( debug ) printf("\t\t[%s] File [%s] Found At Memory Block [%d]\n", __func__, name, block_index);
+	//if ( debug ) printf("\t\t[%s] File [%s] Found At Memory Block [%d]\n", __func__, name, block_index);
 
 	memcpy( file, disk + block_index*BLOCK_SIZE, BLOCK_SIZE);
 	strcpy(file->content, content);
-	 printf("\t\t\t[%s] File [%s] Now Has Name [%s] and content [%s] \n", __func__, name, file->name, file->content);
-	 //edit_descriptor_name2(block_index, name, content); 
+	 //printf("\t\t\t[%s] File [%s] Now Has Name [%s] and content [%s] \n", __func__, name, file->name, file->content);
 	 memcpy( disk + block_index*BLOCK_SIZE, file, BLOCK_SIZE);	
 	free(file);
 	return 1;
 }
-
-/************************** Getter functions ************************************/
 char * get_directory_name ( char*name ) {
 	dir_type *folder = malloc ( BLOCK_SIZE);
 	char *tmp = malloc(sizeof(char)*MAX_STRING_LENGTH); 
 		
-	//True arguement tells the find function that we are looking
-	//for a directory not a file
 	int block_index = find_block(name, true);
 	if ( block_index == -1 )  {
 		if ( debug ) printf("\t\t\t[%s] Folder [%s] not found\n", __func__, name);
@@ -1367,19 +1061,15 @@ char * get_directory_name ( char*name ) {
 	memcpy( folder, disk + block_index*BLOCK_SIZE, BLOCK_SIZE);
 	
 	strcpy( tmp, folder->name);
-		if ( debug ) printf("\t\t\t[%s] Name [%s] found for [%s] folder\n", __func__, tmp, name );
+		//if ( debug ) printf("\t\t\t[%s] Name [%s] found for [%s] folder\n", __func__, tmp, name );
 		
 	free ( folder );
 	return tmp;
 }
 
-/*--------------------------------------------------------------------------------*/
-
 char * get_directory_top_level ( char*name) {
 	dir_type *folder = malloc ( BLOCK_SIZE);
 	char *tmp = malloc(sizeof(char)*MAX_STRING_LENGTH); 
-
-	//true ==> indicates a folder and not a file
 	int block_index = find_block(name, true);
 	if ( block_index == -1 )  {
 		if ( debug ) printf("\t\t\t[%s] Folder [%s] not found\n", __func__,name);
@@ -1390,13 +1080,11 @@ char * get_directory_top_level ( char*name) {
 	memcpy( folder, disk + block_index*BLOCK_SIZE, BLOCK_SIZE);
 	
 	strcpy( tmp, folder->top_level);
-		if ( debug ) printf("\t\t\t[%s] top_level [%s] found for [%s] folder\n", __func__, tmp, name );
+		//if ( debug ) printf("\t\t\t[%s] top_level [%s] found for [%s] folder\n", __func__, tmp, name );
 	
 	free ( folder );
 	return tmp;
 }
-
-/*--------------------------------------------------------------------------------*/
 
 char * get_directory_subitem ( char*name, int subitem_index, char*subitem_name ) {
 	dir_type *folder = malloc ( BLOCK_SIZE);
@@ -1412,21 +1100,19 @@ char * get_directory_subitem ( char*name, int subitem_index, char*subitem_name )
 	memcpy( folder, disk + block_index*BLOCK_SIZE, BLOCK_SIZE);
 	
 	if ( subitem_index >= 0 ) { 
-		//Case we are changing the name of a subitem
 		strcpy( tmp, folder->subitem[subitem_index]);
 		if ( debug ) printf("\t\t\t[%s] subitem[%d] = [%s] for [%s] folder\n", __func__, subitem_index, tmp, name );
 		free(folder);
 		return tmp;
 	}
 	else { 			 
-		//Case that we Are Searching for a Sub Item
 		for ( int i =0; i < folder->subitem_count; i ++ ) {
 			if ( strcmp( folder->subitem[i], subitem_name ) == 0 ) {
-				if ( debug ) printf( "\t\t\t[%s] Found [%s] as a Subitem of Directory [%s]\n", __func__, subitem_name, name );
+				//if ( debug ) printf( "\t\t\t[%s] Found [%s] as a Subitem of Directory [%s]\n", __func__, subitem_name, name );
 				return "0";
 			}
 		}
-		if ( debug ) printf( "\t\t\t[%s] Did Not Find [%s] as a Subitem of Directory [%s]\n", __func__, subitem_name, name );
+		//if ( debug ) printf( "\t\t\t[%s] Did Not Find [%s] as a Subitem of Directory [%s]\n", __func__, subitem_name, name );
 		free ( folder );
 		return "-1";
 	}
@@ -1434,21 +1120,15 @@ char * get_directory_subitem ( char*name, int subitem_index, char*subitem_name )
 	return tmp;
 }
 
-/*--------------------------------------------------------------------------------*/
-
 int edit_directory_subitem (char* name, char* sub_name, char* new_sub_name,char *content)
 {
 	dir_type *folder = malloc ( BLOCK_SIZE);
-
-	//True argument tells the find function that we are looking
-	//for a directory not a file
 	int block_index = find_block(name, true);
 	if ( block_index == -1 ) {
 		if ( debug ) printf("\t\t\t[%s] Folder [%s] not found\n", __func__, name);
 	}
 	
 	memcpy( folder, disk + block_index*BLOCK_SIZE, BLOCK_SIZE);
-
 	const int cnt = folder->subitem_count;	
 	int i;
 	for (i=0; i < cnt; i++)
@@ -1456,7 +1136,7 @@ int edit_directory_subitem (char* name, char* sub_name, char* new_sub_name,char 
 		if (strcmp(folder->subitem[i], sub_name) == 0)
 		{
 			strcpy(folder->subitem[i], new_sub_name);
-			if (debug) printf("\t\t\t[%s] Edited subitem in %s from %s to %s\n", __func__, folder->name, sub_name, folder->subitem[i]);
+			//if (debug) printf("\t\t\t[%s] Edited subitem in %s from %s to %s\n", __func__, folder->name, sub_name, folder->subitem[i]);
 
 			memcpy(disk + block_index*BLOCK_SIZE ,folder, BLOCK_SIZE);
 			free(folder);
@@ -1467,15 +1147,10 @@ int edit_directory_subitem (char* name, char* sub_name, char* new_sub_name,char 
 	free(folder);
 	return -1;
 }
-
-/*--------------------------------------------------------------------------------*/
 
 int edit_directory_subitem2 (char* name, char* sub_name, char* content,char *new_sub_name)
 {
 	dir_type *folder = malloc ( BLOCK_SIZE);
-
-	//True argument tells the find function that we are looking
-	//for a directory not a file
 	int block_index = find_block(name, true);
 	if ( block_index == -1 ) {
 		if ( debug ) printf("\t\t\t[%s] Folder [%s] not found\n", __func__, name);
@@ -1490,7 +1165,7 @@ int edit_directory_subitem2 (char* name, char* sub_name, char* content,char *new
 		if (strcmp(folder->subitem[i], sub_name) == 0)
 		{
 			strcpy(folder->subitem[i], new_sub_name);
-			if (debug) printf("\t\t\t[%s] Edited subitem in %s from %s to %s\n", __func__, folder->name, sub_name, folder->subitem[i]);
+			//if (debug) printf("\t\t\t[%s] Edited subitem in %s from %s to %s\n", __func__, folder->name, sub_name, folder->subitem[i]);
 
 			memcpy(disk + block_index*BLOCK_SIZE ,folder, BLOCK_SIZE);
 			free(folder);
@@ -1501,8 +1176,6 @@ int edit_directory_subitem2 (char* name, char* sub_name, char* content,char *new
 	free(folder);
 	return -1;
 }
-
-/*--------------------------------------------------------------------------------*/
 
 int get_directory_subitem_count( char*name) {
 	
@@ -1518,19 +1191,14 @@ int get_directory_subitem_count( char*name) {
 	memcpy( folder, disk + block_index*BLOCK_SIZE, BLOCK_SIZE);
  	
  	tmp = folder->subitem_count;
-		if ( debug ) printf("\t\t\t[%s] subitem_count [%d] found for [%s] folder\n", __func__, folder->subitem_count, name );
+		//if ( debug ) printf("\t\t\t[%s] subitem_count [%d] found for [%s] folder\n", __func__, folder->subitem_count, name );
 	
 	free ( folder );
 	return tmp;
 }
-
-/*--------------------------------------------------------------------------------*/
-
 char * get_file_name ( char*name ) {
 	file_type *file = malloc ( BLOCK_SIZE);
 	char *tmp = malloc(sizeof(char)*MAX_STRING_LENGTH); 
-		
-	//false ==> indicates a file and not a folder 
 	int block_index = find_block(name, false);
 	if ( block_index == -1 ) {
 		if ( debug ) printf("\t\t\t[%s] File [%s] not found\n", __func__, name);
@@ -1541,13 +1209,11 @@ char * get_file_name ( char*name ) {
 	memcpy( file, disk + block_index*BLOCK_SIZE, BLOCK_SIZE);
 	
 	strcpy( tmp, file->name);
-		if ( debug ) printf("\t\t\t[%s] Name [%s] found for [%s] file\n", __func__, tmp, name );
+		//if ( debug ) printf("\t\t\t[%s] Name [%s] found for [%s] file\n", __func__, tmp, name );
 		
 	free ( file );
 	return tmp;
 }
-
-/*--------------------------------------------------------------------------------*/
 
 char * get_file_top_level ( char*name) {
 	file_type *file = malloc ( BLOCK_SIZE);
@@ -1569,8 +1235,6 @@ char * get_file_top_level ( char*name) {
 	return tmp;
 }
 
-/*--------------------------------------------------------------------------------*/
-
 int get_file_size( char*name) {
 	
 	file_type *file = malloc ( BLOCK_SIZE);
@@ -1591,9 +1255,7 @@ int get_file_size( char*name) {
 	return tmp;
 }
 
-/*--------------------------------------------------------------------------------*/
-
-/********************************* Print Functions ********************************/
+/********************************* VISUALIZACION ********************************/
 void print_directory ( char *name) {
 	dir_type *folder = malloc( BLOCK_SIZE);
 	int block_index = find_block(name, true);
@@ -1609,7 +1271,6 @@ void print_directory ( char *name) {
 	for (int i = 0; i < folder->subitem_count; i++) {
 		printf( "%s ", folder->subitem[i]);
 	}
-	//printf("\n\tsubitem_count = %d\n", folder->subitem_count);
 	printf("	-----------------------------\n");
 	
 	free(folder);
@@ -1631,5 +1292,3 @@ void print_file ( char *name) {
 	
 	free(file);
 }
-
-/*--------------------------------------------------------------------------------*/
