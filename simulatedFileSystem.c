@@ -54,7 +54,7 @@ struct action {
     { "mkfil", do_mkfil },
     { "rmfil", do_rmfil },
     { "mvfil", do_mvfil },
-	{ "wrfil", do_mvfil },
+	{ "wrfil", do_wrfil },
     { "szfil", do_szfil },
     { "exit" , do_exit  },
     { NULL, NULL }	// end mark, do not remove ,gives wierd errors! :(
@@ -72,13 +72,16 @@ int find_block ( char* name, bool directory );
 int add_descriptor ( char * name );
 int edit_descriptor ( int free_index, bool free, int name_index, char * name );
 int edit_descriptor_name (int index, char* new_name,char *content);
+int edit_descriptor_name2 (int index, char* new_name,char *content);
 int add_directory( char * name );
 int remove_directory( char * name );
 int edit_directory ( char * name,  char*subitem_name, char *new_name, bool name_change, bool directory );
 int add_file( char * name, int size );
 int edit_file ( char * name, int size, char *new_name, char *content);
+int edit_file2 ( char * name, int size, char *new_name, char *content);
 int remove_file (char* name);
 int edit_directory_subitem (char* name, char* sub_name, char* new_sub_name,char *content);
+int edit_directory_subitem2 (char* name, char* sub_name, char* new_sub_name,char *content);
 
 void print_directory ( char *name);
 char * get_directory_name ( char*name );
@@ -118,6 +121,7 @@ typedef struct dir_type {
 	bool subitem_type[MAX_SUBDIRECTORIES];	//true if directory, false if file
 	int subitem_count;
 	struct dir_type *next;
+	char content[MAX_STRING_LENGTH];
 } dir_type;
 
 
@@ -135,6 +139,7 @@ typedef struct {
 	bool free[BLOCKS];
 	bool directory[BLOCKS];
 	char (*name)[MAX_STRING_LENGTH];
+	char content[MAX_STRING_LENGTH];
 } descriptor_block;
 
 char *disk;
@@ -573,7 +578,7 @@ int do_wrfil(char *name, char *size, char *content)
 			return 0;
 		}
 
-	int er = edit_file( name, 0, size,content);
+	int er = edit_file2( name, 0, size,content);
 	
 	if (er == -1) return -1;
 	if (debug) print_file(size);
@@ -860,7 +865,23 @@ int edit_descriptor_name (int index, char* new_name,char *content)
 	free(descriptor);
 	return 0;
 }
+/*--------------------------------------------------------------------------------*/
 
+// This changes the name of a file in the descriptor; used for moving files;
+int edit_descriptor_name2 (int index, char* new_name,char *content)
+{
+	descriptor_block *descriptor = malloc( BLOCK_SIZE*2 );
+
+	memcpy ( descriptor, disk, BLOCK_SIZE*2 );
+
+	// Change the name of the file at index to the new_name
+	strcpy(descriptor->content[index], content);
+
+	memcpy(disk, descriptor, BLOCK_SIZE*2);
+
+	free(descriptor);
+	return 0;
+}
 /*--------------------------------------------------------------------------------*/
 
 //Allows us to add a folder to the disk.
@@ -1199,6 +1220,50 @@ int edit_file ( char * name, int size, char *new_name, char *content) {
 
 /*--------------------------------------------------------------------------------*/
 
+/*--------------------------------------------------------------------------------*/
+
+//Allows you to directly edit a file and change its size or its name
+int edit_file2 ( char * name, int size, char *new_name, char *content) {
+	file_type *file = malloc ( BLOCK_SIZE);
+	
+	//Find the block in memory where this file is written	
+	int block_index = find_block(name, false);
+	if ( block_index == -1 )  {
+		if ( debug ) printf("\t\t\t[%s] File [%s] not found\n", __func__, name);
+		return -1;
+	}
+	if ( debug ) printf("\t\t[%s] File [%s] Found At Memory Block [%d]\n", __func__, name, block_index);
+
+	memcpy( file, disk + block_index*BLOCK_SIZE, BLOCK_SIZE);
+	
+	if ( size > 0 ) { 
+		//If size is greater than zero, then the files size will be updated
+		file->size = size;
+		if ( debug ) printf("\t\t[%s] File [%s] Now Has Size [%d]\n", __func__, name, size);
+		free(file);
+		return 0;
+	}
+	else {		  
+		//Otherwise, the file's name will be updated
+		char top_level[MAX_STRING_LENGTH];
+		strcpy(top_level, get_file_top_level(name));
+
+		// Change the name of the directory's subitem
+		edit_directory_subitem2(top_level, name, new_name, content); 
+
+		// Change the name of the actual file descriptor
+		edit_descriptor_name2(block_index, new_name, content); 
+
+		strcpy(file->name, new_name );
+		memcpy( disk + block_index*BLOCK_SIZE, file, BLOCK_SIZE);	
+
+		if ( debug ) printf("\t\t\t[%s] File [%s] Now Has Name [%s]\n", __func__, name, file->name);
+
+		free(file);
+		return 0;
+	}
+}
+
 /************************** Getter functions ************************************/
 char * get_directory_name ( char*name ) {
 	dir_type *folder = malloc ( BLOCK_SIZE);
@@ -1308,6 +1373,41 @@ int edit_directory_subitem (char* name, char* sub_name, char* new_sub_name,char 
 			if (debug) printf("\t\t\t[%s] Edited subitem in %s from %s to %s\n", __func__, folder->name, sub_name, folder->subitem[i]);
 
 			memcpy(disk + block_index*BLOCK_SIZE ,folder, BLOCK_SIZE);
+			free(folder);
+			return i;
+		}
+	}
+
+	free(folder);
+	return -1;
+}
+
+/*--------------------------------------------------------------------------------*/
+
+int edit_directory_subitem2 (char* name, char* sub_name, char* new_sub_name,char *content)
+{
+	dir_type *folder = malloc ( BLOCK_SIZE);
+
+	//True argument tells the find function that we are looking
+	//for a directory not a file
+	int block_index = find_block(name, true);
+	if ( block_index == -1 ) {
+		if ( debug ) printf("\t\t\t[%s] Folder [%s] not found\n", __func__, name);
+	}
+	
+	memcpy( folder, disk + block_index*BLOCK_SIZE, BLOCK_SIZE);
+
+	const int cnt = folder->subitem_count;	
+	int i;
+	for (i=0; i < cnt; i++)
+	{
+		if (strcmp(folder->content[i], content) == 0)
+		{
+			strcpy(folder->content[i], content);
+			if (debug) printf("\t\t\t[%s] Edited subitem in %s from %s to %s\n", __func__, folder->content, sub_name, folder->content[i]);
+
+			memcpy(disk + block_index*BLOCK_SIZE ,folder, BLOCK_SIZE);
+
 			free(folder);
 			return i;
 		}
@@ -1441,7 +1541,7 @@ void print_file ( char *name) {
     	assert(strftime(s, sizeof(s), "%c", tm));
 	
 	printf("	-----------------------------\n");
-	printf("	New File Attributes:\n\n\tname = %s\n\tDate and hour = %s\n\tFile Size = %d\n\tLast Modified= %d\n", file->name, s, file->size, file->data_block_count);
+	printf("	New File Attributes:\n\n\tname = %s\n\tDate and hour = %s\n\tFile Size = %d\n\tLast Modified= %d\nFile Content = %d\n", file->name, s, file->size, file->data_block_count,file->content);
 	printf("	-----------------------------\n");
 	
 	free(file);
