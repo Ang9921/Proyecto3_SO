@@ -18,6 +18,7 @@
  *  mvfil	     rename
  *  szfil	     resize 
  *  exit        quit the program
+ * 
  */
 
 int debug = 1;	// extra output; 1 = on, 0 = off
