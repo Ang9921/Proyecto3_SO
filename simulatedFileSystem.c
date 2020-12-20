@@ -30,10 +30,10 @@ int do_cd(char *name, char *size);
 int do_mkdir(char *name, char *size);
 int do_rmdir(char *name, char *size);
 int do_mvdir(char *name, char *size);
-int do_mkfil(char *name, char *size);
+int do_mkfil(char *name, char *size, char *content);
 int do_rmfil(char *name, char *size);
-int do_mvfil(char *name, char *size);
-int do_szfil(char *name, char *size);
+int do_mvfil(char *name, char *size, char *content);
+int do_szfil(char *name, char *size, char *content);
 int do_exit (char *name, char *size);
 /*
     returns 0 (success) or -1 (failure)
@@ -69,14 +69,14 @@ int find_block ( char* name, bool directory );
 
 int add_descriptor ( char * name );
 int edit_descriptor ( int free_index, bool free, int name_index, char * name );
-int edit_descriptor_name (int index, char* new_name);
+int edit_descriptor_name (int index, char* new_name,char *content);
 int add_directory( char * name );
 int remove_directory( char * name );
 int edit_directory ( char * name,  char*subitem_name, char *new_name, bool name_change, bool directory );
 int add_file( char * name, int size );
-int edit_file ( char * name, int size, char *new_name );
+int edit_file ( char * name, int size, char *new_name, char *content);
 int remove_file (char* name);
-int edit_directory_subitem (char* name, char* sub_name, char* new_sub_name);
+int edit_directory_subitem (char* name, char* sub_name, char* new_sub_name,char *content);
 
 void print_directory ( char *name);
 char * get_directory_name ( char*name );
@@ -123,6 +123,7 @@ typedef struct file_type {
 	char name[MAX_STRING_LENGTH];		//Name of file or dir
 	char top_level[MAX_STRING_LENGTH];	//Name of directory one level up 
 	int data_block_index[MAX_FILE_DATA_BLOCKS];
+	char content[MAX_STRING_LENGTH];
 	int data_block_count;
 	int size;
 	struct file_type *next;
@@ -474,7 +475,7 @@ int do_mvdir(char *name, char *new_name) //"size" is actually the new name
 
 /*--------------------------------------------------------------------------------*/
 
-int do_mkfil(char *name, char *size)
+int do_mkfil(char *name, char *size, char *content)
 {
 	if ( disk_allocated == false ) {
 		printf("Error: Disk not allocated\n");
@@ -485,7 +486,7 @@ int do_mkfil(char *name, char *size)
 	
 	//If it returns 0, there is a subitem with that name already
 	if ( get_directory_subitem(current.directory, -1, name) == 0  ) {
-			if ( debug ) printf( "\t\t\t[%s] Cannot make file [%s], a file or directory [%s] already exists\n", __func__, name, name );
+			if ( debug ) printf( "\t\t\t[%s] Cannot make file [%s], a file or directory [%s] already exists content [%s]\n", __func__, name, name, content);
 			if (!debug ) printf( "%s: cannot create file '%s': File exists\n", "mkfil", name );
 			return 0;
 		}
@@ -498,8 +499,8 @@ int do_mkfil(char *name, char *size)
   		if ( debug ) printf("\t[%s] Updating Parents Subitem content\n", __func__ );
   	
   	if ( debug ) print_file(name);
-  	return 0;
-}
+  	return 0; 
+	  }
 
 /*--------------------------------------------------------------------------------*/
 
@@ -529,7 +530,7 @@ int do_rmfil(char *name, char *size)
 /*--------------------------------------------------------------------------------*/
 
 // Rename a file
-int do_mvfil(char *name, char *size)
+int do_mvfil(char *name, char *size, char *content)
 {
 	if ( disk_allocated == false ) {
 		printf("Error: Disk not allocated\n");
@@ -540,23 +541,21 @@ int do_mvfil(char *name, char *size)
 
 	//If it returns 0, there is a subitem with that name already
 	if ( get_directory_subitem(current.directory, -1, size) == 0  ) {
-			if ( debug ) printf( "\t\t\t[%s] Cannot rename file [%s], a file or directory [%s] already exists\n", __func__, name, size );
-			if (!debug ) printf( "%s: cannot rename file or directory '%s'\n", "mvfil", name );
+			if ( debug ) printf( "\t\t\t[%s] Cannot rename file [%s], a file or directory [%s] already exists [%s]\n", __func__, name, size,content );
+			if (!debug ) printf( "%s: cannot rename file or directory '%s'\n", "mvfil", name ); 
 			return 0;
 		}
 
-	int er = edit_file( name, 0, size);
+	int er = edit_file( name, 0, size,content);
 	
 	if (er == -1) return -1;
 	if (debug) print_file(size);
-
-	return 0;
 }
 
 /*--------------------------------------------------------------------------------*/
 
 // Resize a file -- addon to be implemented
-int do_szfil(char *name, char *size)
+int do_szfil(char *name, char *size, char *content)
 {
 	if ( disk_allocated == false ) {
 		printf("Error: Disk not allocated\n");
@@ -565,7 +564,7 @@ int do_szfil(char *name, char *size)
 	
 	if ( debug ) printf("\t[%s] Resizing File: [%s], to: [%s]\n", __func__, name, size );
 	//remove file; make new file with updated size
-	if (remove_file(name) != -1)  do_mkfil(name, size);
+	if (remove_file(name) != -1)  do_mkfil(name, size,content);
 
 	else {
 		if ( debug ) printf("\t[%s] File: [%s] does not exist. Cannot resize.\n", __func__, name);
@@ -820,7 +819,7 @@ int edit_descriptor ( int free_index, bool free, int name_index, char * name ) {
 /*--------------------------------------------------------------------------------*/
 
 // This changes the name of a file in the descriptor; used for moving files;
-int edit_descriptor_name (int index, char* new_name)
+int edit_descriptor_name (int index, char* new_name,char *content)
 {
 	descriptor_block *descriptor = malloc( BLOCK_SIZE*2 );
 
@@ -1130,7 +1129,7 @@ int remove_file (char* name)
 /*--------------------------------------------------------------------------------*/
 
 //Allows you to directly edit a file and change its size or its name
-int edit_file ( char * name, int size, char *new_name ) {
+int edit_file ( char * name, int size, char *new_name, char *content) {
 	file_type *file = malloc ( BLOCK_SIZE);
 	
 	//Find the block in memory where this file is written	
@@ -1156,10 +1155,10 @@ int edit_file ( char * name, int size, char *new_name ) {
 		strcpy(top_level, get_file_top_level(name));
 
 		// Change the name of the directory's subitem
-		edit_directory_subitem(top_level, name, new_name); 
+		edit_directory_subitem(top_level, name, new_name, content); 
 
 		// Change the name of the actual file descriptor
-		edit_descriptor_name(block_index, new_name); 
+		edit_descriptor_name(block_index, new_name, content); 
 
 		strcpy(file->name, new_name );
 		memcpy( disk + block_index*BLOCK_SIZE, file, BLOCK_SIZE);	
@@ -1259,7 +1258,7 @@ char * get_directory_subitem ( char*name, int subitem_index, char*subitem_name )
 
 /*--------------------------------------------------------------------------------*/
 
-int edit_directory_subitem (char* name, char* sub_name, char* new_sub_name)
+int edit_directory_subitem (char* name, char* sub_name, char* new_sub_name,char *content)
 {
 	dir_type *folder = malloc ( BLOCK_SIZE);
 
