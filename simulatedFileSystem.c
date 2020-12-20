@@ -23,25 +23,26 @@
 
 int debug = 1;	// extra output; 1 = on, 0 = off
 
-int do_root (char *name, char *size);
-int do_print(char *name, char *flag);
-int do_print_vs(char *name, char *size);
-int do_cd(char *name, char *size);
-int do_mkdir(char *name, char *size);
-int do_rmdir(char *name, char *size);
-int do_mvdir(char *name, char *size);
+int do_root (char *name, char *size, char *content);
+int do_print(char *name, char *flag, char *content);
+int do_print_vs(char *name, char *size, char *content);
+int do_cd(char *name, char *size, char *content);
+int do_mkdir(char *name, char *size, char *content);
+int do_rmdir(char *name, char *size, char *content);
+int do_mvdir(char *name, char *size, char *content);
 int do_mkfil(char *name, char *size, char *content);
-int do_rmfil(char *name, char *size);
+int do_rmfil(char *name, char *size, char *content);
 int do_mvfil(char *name, char *size, char *content);
+int do_wrfil(char *name, char *size, char *content);
 int do_szfil(char *name, char *size, char *content);
-int do_exit (char *name, char *size);
+int do_exit (char *name, char *size, char *content);
 /*
     returns 0 (success) or -1 (failure)
 */
 
 struct action {
   char *cmd;					// pointer to string
-  int (*action)(char *name, char *size);	// pointer to function
+  int (*action)(char *name, char *size, char* ext);	// pointer to function
 } table[] = {
     { "start" , do_root  },
     { "ls", do_print },
@@ -53,6 +54,7 @@ struct action {
     { "mkfil", do_mkfil },
     { "rmfil", do_rmfil },
     { "mvfil", do_mvfil },
+	{ "wrfil", do_mvfil },
     { "szfil", do_szfil },
     { "exit" , do_exit  },
     { NULL, NULL }	// end mark, do not remove ,gives wierd errors! :(
@@ -147,7 +149,7 @@ int main(int argc, char *argv[])
 	(void)argc;
 	(void)*argv;
     char in[LINESIZE];
-    char *cmd, *fnm, *fsz;
+    char *cmd, *fnm, *fsz, *fex;
     char dummy[] = "";
 
 	//printf("sizeof file_type = %d\nsizeof dir_type = %d\nsize of descriptor_block = %d\nMAX_FILE_SIZE %d\n", sizeof(file_type), sizeof(dir_type), sizeof(descriptor_block), MAX_FILE_DATA_BLOCKS );
@@ -166,7 +168,7 @@ int main(int argc, char *argv[])
       fnm = (n > 1) ? a[1] : dummy;
       fsz = (n > 2) ? a[2] : dummy;
 
-      //if (debug) printf(":%s:%s:%s:\n", cmd, fnm, fsz);
+      //if (debug) printf(":%s:%s:%s:\n", cmd, fnm, fsz, fex);
 
       if (n == 0) continue;	// blank line
 
@@ -177,10 +179,10 @@ int main(int argc, char *argv[])
                 {
                     found = 1;
                     
-                    int ret = (ptr->action)(fnm, fsz);
+                    int ret = (ptr->action)(fnm, fsz, fex);
                     //every function returns -1 on failure
                     if (ret == -1)
-                        { printf("  %s %s %s: failed\n", cmd, fnm, fsz); }
+                        { printf("  %s %s %s %s: failed\n", cmd, fnm, fsz, fex); }
                     break;
                 }
 	    }
@@ -221,7 +223,7 @@ void parse(char *buf, int *argc, char *argv[])
 /*--------------------------------------------------------------------------------*/
 
 //This function initializes the disk, descriptor within the disk, as well as the root directory.
-int do_root(char *name, char *size)
+int do_root(char *name, char *size, char *content)
 {
 	(void)*name;
 	(void)*size;
@@ -253,7 +255,7 @@ int do_root(char *name, char *size)
 
 /*--------------------------------------------------------------------------------*/
 
-int do_print(char *name, char *flag)
+int do_print(char *name, char *flag, char *content)
 {
 	(void)*name;
 	(void)*flag;
@@ -270,7 +272,7 @@ int do_print(char *name, char *flag)
 
 /*--------------------------------------------------------------------------------*/
 
-int do_print_vs(char *name, char *size)
+int do_print_vs(char *name, char *size, char *content)
 {
 	(void)*name;
 	(void)*size;
@@ -287,7 +289,7 @@ int do_print_vs(char *name, char *size)
 
 /*--------------------------------------------------------------------------------*/
 
-int do_cd(char *name, char *size)
+int do_cd(char *name, char *size, char *content)
 {
 	(void)*size;
 	if ( disk_allocated == false ) {
@@ -338,7 +340,7 @@ int do_cd(char *name, char *size)
 
 /*--------------------------------------------------------------------------------*/
 
-int do_mkdir(char *name, char *size)
+int do_mkdir(char *name, char *size, char *content)
 {
 	(void)*size;
 	if ( disk_allocated == false ) {
@@ -377,7 +379,7 @@ int do_mkdir(char *name, char *size)
 
 /*--------------------------------------------------------------------------------*/
 
-int do_rmdir(char *name, char *size)
+int do_rmdir(char *name, char *size, char *content)
 {
 	(void)*size;
 	if ( disk_allocated == false ) {
@@ -452,7 +454,7 @@ int do_rmdir(char *name, char *size)
 
 /*--------------------------------------------------------------------------------*/
 
-int do_mvdir(char *name, char *new_name) //"size" is actually the new name
+int do_mvdir(char *name, char *new_name, char *content) //"size" is actually the new name
 {
 	if ( disk_allocated == false ) {
 		printf("Error: Disk not allocated\n");
@@ -505,7 +507,7 @@ int do_mkfil(char *name, char *size, char *content)
 /*--------------------------------------------------------------------------------*/
 
 // Remove a file
-int do_rmfil(char *name, char *size)
+int do_rmfil(char *name, char *size, char *content)
 {
 	if ( disk_allocated == false ) {
 		printf("Error: Disk not allocated\n");
@@ -554,6 +556,31 @@ int do_mvfil(char *name, char *size, char *content)
 
 /*--------------------------------------------------------------------------------*/
 
+// Rename a file
+int do_wrfil(char *name, char *size, char *content)
+{
+	if ( disk_allocated == false ) {
+		printf("Error: Disk not allocated\n");
+		return 0;
+	}
+	
+	if ( debug ) printf("\t[%s] Renaming File: [%s], to: [%s]\n", __func__, name, size );
+
+	//If it returns 0, there is a subitem with that name already
+	if ( get_directory_subitem(current.directory, -1, size) == 0  ) {
+			if ( debug ) printf( "\t\t\t[%s] Cannot rename file [%s], a file or directory [%s] already exists [%s]\n", __func__, name, size,content );
+			if (!debug ) printf( "%s: cannot rename file or directory '%s'\n", "mvfil", name ); 
+			return 0;
+		}
+
+	int er = edit_file( name, 0, size,content);
+	
+	if (er == -1) return -1;
+	if (debug) print_file(size);
+}
+
+/*--------------------------------------------------------------------------------*/
+
 // Resize a file -- addon to be implemented
 int do_szfil(char *name, char *size, char *content)
 {
@@ -576,7 +603,7 @@ int do_szfil(char *name, char *size, char *content)
 
 /*--------------------------------------------------------------------------------*/
 
-int do_exit(char *name, char *size)
+int do_exit(char *name, char *size, char *content)
 {
 	(void)*name;
 	(void)*size;
@@ -1017,7 +1044,7 @@ int edit_directory (char * name,  char*subitem_name, char *new_name, bool name_c
 /*--------------------------------------------------------------------------------*/
 
 //Allows us to add a file to our disk; This function will allocate this file descriptor block (holds file info), as well as data blocks 
-int add_file( char * name, int size ) {
+int add_file( char * name, int size) {
 	char subname[20];
 	
 	if ( size < 0 || strcmp(name,"") == 0 ) {
