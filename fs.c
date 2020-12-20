@@ -236,6 +236,7 @@ int do_root(char *name, char *size, char *content)
 	current.parent_index = -1;
 	
 	if ( debug ) printf("Disco listo!\n");
+	 printf(ANSI_COLOR_BLUE"$ "ANSI_COLOR_RESET);
 	disk_allocated = true;
 	
  	return 0;
@@ -265,7 +266,7 @@ int do_print_vs(char *name, char *size, char *content)
 		printf("Error: Disk not allocated\n");
 		return 0;
 	}
-	printing(current.directory);
+	printing("root");
 	
 	return 0;
 }
@@ -293,7 +294,7 @@ int do_cd(char *name, char *size, char *content)
 	{	
 		char tmp[20];
 		if ( (strcmp(get_directory_subitem(current.directory, -1, name), "-1") == 0) && strcmp( current.parent, name ) != 0 ) {
-			//if ( debug ) printf( "\t\t\t[%s] Cannot Change to Directory [%s]\n", __func__, name );
+			if ( debug ) printf( "\t\t\t[%s] Cannot Change to Directory [%s]\n", __func__, name );
 			if (!debug ) printf( "%s: %s: No such file or directory\n", "cd", name );
 			return 0;
 		}
